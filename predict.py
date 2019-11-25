@@ -1,4 +1,4 @@
-from model import train_model
+from model import train_model, predict
 from config import model_path
 
 if __name__ == '__main__':
