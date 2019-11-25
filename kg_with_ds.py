@@ -418,8 +418,6 @@ def test(test_data):
 
 
 def predict(sentence_list):
-    from data_trans import process
-    process()
     from data_loader import train_data, SpoSearcher, extract_items
 
     train_model, subject_model, object_model = model()
