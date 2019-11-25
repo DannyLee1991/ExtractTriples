@@ -131,26 +131,6 @@ class Attention(Layer):
         return (input_shape[0][0], input_shape[0][1], self.out_dim)
 
 
-def position_id(x):
-    if isinstance(x, list) and len(x) == 2:
-        x, r = x
-    else:
-        r = 0
-    pid = K.arange(K.shape(x)[1])
-    pid = K.expand_dims(pid, 0)
-    pid = K.tile(pid, [K.shape(x)[0], 1])
-    return K.abs(pid - K.cast(r, 'int32'))
-
-
-def get_k_inter(x, n=6):
-    seq, k1, k2 = x
-    k_inter = [K.round(k1 * a + k2 * (1 - a)) for a in np.arange(n) / (n - 1.)]
-    k_inter = [seq_gather([seq, k]) for k in k_inter]
-    k_inter = [K.expand_dims(k, 1) for k in k_inter]
-    k_inter = K.concatenate(k_inter, 1)
-    return k_inter
-
-
 class ExponentialMovingAverage:
     """对模型权重进行指数滑动平均。
     用法：在model.compile之后、第一次训练之前使用；
@@ -281,8 +261,16 @@ def model():
     t1, t2, s1, s2, k1, k2, o1, o2, pres, preo = t1_in, t2_in, s1_in, s2_in, k1_in, k2_in, o1_in, o2_in, pres_in, preo_in
     mask = Lambda(lambda x: K.cast(K.greater(K.expand_dims(x, 2), 0), 'float32'))(t1)
 
-    # -------------------------------------------------
-    # -------------------------------------------------
+    def position_id(x):
+        if isinstance(x, list) and len(x) == 2:
+            x, r = x
+        else:
+            r = 0
+        pid = K.arange(K.shape(x)[1])
+        pid = K.expand_dims(pid, 0)
+        pid = K.tile(pid, [K.shape(x)[0], 1])
+        return K.abs(pid - K.cast(r, 'int32'))
+
     pid = Lambda(position_id)(t1)
     position_embedding = Embedding(maxlen, char_size, embeddings_initializer='zeros')
     pv = position_embedding(pid)
@@ -324,8 +312,15 @@ def model():
     t_max = Lambda(seq_maxpool)([t, mask])
     pc = Dense(char_size, activation='relu')(t_max)
     pc = Dense(num_classes, activation='sigmoid')(pc)
-    # -------------------------------------------------
-    # -------------------------------------------------
+
+    def get_k_inter(x, n=6):
+        seq, k1, k2 = x
+        k_inter = [K.round(k1 * a + k2 * (1 - a)) for a in np.arange(n) / (n - 1.)]
+        k_inter = [seq_gather([seq, k]) for k in k_inter]
+        k_inter = [K.expand_dims(k, 1) for k in k_inter]
+        k_inter = K.concatenate(k_inter, 1)
+        return k_inter
+
     k = Lambda(get_k_inter, output_shape=(6, t_dim))([t, k1, k2])
     k = Bidirectional(CuDNNGRU(t_dim))(k)
     k1v = position_embedding(Lambda(position_id)([t, k1]))
