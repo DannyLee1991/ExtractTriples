@@ -1,0 +1,7 @@
+keras==2.2.4
+gensim
+tqdm
+numpy
+pyhanlp
+pyahocorasick
+temsorflow=1.15
