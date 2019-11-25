@@ -4,4 +4,4 @@ tqdm
 numpy
 pyhanlp
 pyahocorasick
-temsorflow=1.15
+tensorflow==1.15
